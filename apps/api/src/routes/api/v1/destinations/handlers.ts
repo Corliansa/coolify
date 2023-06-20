@@ -49,6 +49,10 @@ export async function listDestinations(request: FastifyRequest<ListDestinations>
 export async function checkDestination(request: FastifyRequest<CheckDestination>) {
 	try {
 		const { network } = request.body;
+		// If the network name starts with coolify, it should be safe to use it
+		if (network?.startsWith('coolify')) {
+			return {};
+		}
 		const found = await prisma.destinationDocker.findFirst({ where: { network } });
 		if (found) {
 			throw {
@@ -153,12 +157,18 @@ export async function forceDeleteDestination(request: FastifyRequest<OnlyId>) {
 		}
 		const applications = await prisma.application.findMany({ where: { destinationDockerId: id } });
 		for (const application of applications) {
-			await prisma.applicationSettings.deleteMany({ where: { application: { id: application.id } } });
+			await prisma.applicationSettings.deleteMany({
+				where: { application: { id: application.id } }
+			});
 			await prisma.buildLog.deleteMany({ where: { applicationId: application.id } });
 			await prisma.build.deleteMany({ where: { applicationId: application.id } });
 			await prisma.secret.deleteMany({ where: { applicationId: application.id } });
-			await prisma.applicationPersistentStorage.deleteMany({ where: { applicationId: application.id } });
-			await prisma.applicationConnectedDatabase.deleteMany({ where: { applicationId: application.id } });
+			await prisma.applicationPersistentStorage.deleteMany({
+				where: { applicationId: application.id }
+			});
+			await prisma.applicationConnectedDatabase.deleteMany({
+				where: { applicationId: application.id }
+			});
 			await prisma.previewApplication.deleteMany({ where: { applicationId: application.id } });
 		}
 		const databases = await prisma.database.findMany({ where: { destinationDockerId: id } });
@@ -348,7 +358,7 @@ export async function verifyRemoteDockerEngineFn(id: string) {
 		}
 		await prisma.destinationDocker.update({ where: { id }, data: { remoteVerified: true } });
 	} catch (error) {
-		console.log(error)
+		console.log(error);
 		throw new Error('Error while verifying remote docker engine');
 	}
 }
